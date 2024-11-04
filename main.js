@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	const start = async() => {
 		const mindarThree = new window.MINDAR.IMAGE.MindARThree({
 			container: document.body,
-			imageTargetSrc: './abc.mind',
-			maxTrack: 3,
+			imageTargetSrc: './abcd.mind',
+			maxTrack: 4,
 		});
 		
 		const {renderer, scene, camera} = mindarThree;
@@ -52,6 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
 		const carListener = new THREE.AudioListener();
 		const carAudio = new THREE.PositionalAudio(carListener);	
 		
+		const dog = await loadGLTF("./dog/scene.gltf");
+		dog.scene.scale.set(0.5, 0.5, 0.5);
+
+		const dogMixer = new THREE.AnimationMixer(dog.scene);
+		const dogAction = dogMixer.clipAction(dog.animations[0]);
+		dogAction.play();
+
+
+
 		const airplaneAnchor = mindarThree.addAnchor(0);
 		airplaneAnchor.group.add(airplane.scene);
 		// added listener to the camera
@@ -106,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			carAudio.pause();
 		}
 		
+		const dogAnchor = mindarThree.addAnchor(3);
+		dogAnchor.group.add(dog.scene);
+
+
 		const clock = new THREE.Clock();
 		
 		
@@ -117,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			ballMixer.update(delta);
 			carMixer.update(delta);
 			car.scene.rotation.set(0, car.scene.rotation.y + delta, 0);
+			dogMixer.update(delta);
 			renderer.render(scene, camera);
 		});
 	}
