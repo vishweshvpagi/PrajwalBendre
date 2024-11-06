@@ -5,3 +5,8 @@
   2. Click on the link in the About section.
   3. Allow the camera access in the alert box.
   4. Now show the target images in front of the camera and see the animation.
+---
+## Contributors
+  1. Pranav Sharma
+  2. 
+  3. 
