@@ -4,8 +4,6 @@
 ## Tools Used
 1. MindAR
 2. Three.js
-## Demo Video
-
 ## How to use?
 1.	Download the images from the images folder in the GitHub repository.
 2.	Click on the link in the About section to see our project.
