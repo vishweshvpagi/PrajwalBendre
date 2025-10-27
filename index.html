@@ -1,18 +1,325 @@
+<!DOCTYPE html>
 <html>
-	<head>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" >
-		<title> AR Flashcards for Alphabets A B C D</title>
-		<script src="./libs/mindar-image-three.prod.js"></script>
-		<script src="./main.js" type="module"></script>
-		<style>
-			html, body {
-				position: relative;
-				margin: 0;
-				width: 100%;
-				overflow: hidden;			
-			}
-		</style>
-	</head>
-	<body>
-	</body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR Flashcards - Multiple Characters</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        #container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            z-index: 999;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            max-width: 80%;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 50px;
+            border-radius: 15px;
+            font-size: 18px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 16px;
+            z-index: 1001;
+            text-align: center;
+            display: none;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="instructions">Point camera at any AR flashcard 🎯</div>
+    <div id="loading">
+        <div>Initializing AR Camera...</div>
+        <div class="spinner"></div>
+        <div style="font-size: 14px; color: #666; margin-top: 10px;">
+            Please allow camera access when prompted
+        </div>
+    </div>
+    <div id="error"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { MindARThree } from 'mindar-image-three';
+        
+        // Configuration for all your AR models
+        const MODELS_CONFIG = [
+            {
+                name: 'Tung Tung',
+                folder: './tung',
+                file: 'scene.gltf',
+                scale: 0.8,
+                rotation: 0.01
+            },
+            {
+                name: 'Trala',
+                folder: './trala',
+                file: 'scene.gltf',
+                scale: 0.8,
+                rotation: 0.01
+            },
+            {
+                name: 'Teddy Bear',
+                folder: './teddy_bear',
+                file: 'scene.gltf',
+                scale: 0.5,
+                rotation: 0.008
+            }
+        ];
+        
+        const startAR = async () => {
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const instructionsDiv = document.getElementById('instructions');
+            
+            try {
+                console.log("🚀 Starting AR initialization...");
+                
+                // Initialize MindAR with multiple targets
+                const mindarThree = new MindARThree({
+                    container: document.getElementById("container"),
+                    imageTargetSrc: './targets.mind', // One file with all targets
+                    uiLoading: "no",
+                    uiScanning: "no",
+                    uiError: "no"
+                });
+                
+                const { renderer, scene, camera } = mindarThree;
+                
+                console.log("✅ MindAR initialized!");
+                
+                // Setup lighting
+                const ambientLight = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                directionalLight.position.set(1, 2, 1);
+                scene.add(directionalLight);
+                
+                const pointLight = new THREE.PointLight(0xffffff, 0.5);
+                pointLight.position.set(0, 2, 0);
+                scene.add(pointLight);
+                
+                console.log("💡 Lighting added");
+                
+                // Load GLTF Loader
+                const loader = new GLTFLoader();
+                
+                // Track loaded models and mixers
+                const loadedModels = [];
+                const mixers = [];
+                
+                // Load all models for each target
+                for (let i = 0; i < MODELS_CONFIG.length; i++) {
+                    const config = MODELS_CONFIG[i];
+                    const anchor = mindarThree.addAnchor(i);
+                    
+                    console.log(`📦 Loading ${config.name}...`);
+                    
+                    try {
+                        loadingDiv.innerHTML = `
+                            <div>Loading ${config.name}...</div>
+                            <div class="spinner"></div>
+                        `;
+                        
+                        const gltf = await loader.loadAsync(`${config.folder}/${config.file}`);
+                        const model = gltf.scene;
+                        
+                        // Apply configuration
+                        model.scale.set(config.scale, config.scale, config.scale);
+                        model.position.set(0, 0, 0);
+                        
+                        // Add to anchor
+                        anchor.group.add(model);
+                        
+                        // Store model reference
+                        loadedModels.push({
+                            model: model,
+                            anchor: anchor,
+                            config: config,
+                            mixer: null
+                        });
+                        
+                        // Handle animations
+                        if (gltf.animations && gltf.animations.length > 0) {
+                            const mixer = new THREE.AnimationMixer(model);
+                            const action = mixer.clipAction(gltf.animations[0]);
+                            action.play();
+                            loadedModels[loadedModels.length - 1].mixer = mixer;
+                            console.log(`▶️ ${config.name} animations playing`);
+                        }
+                        
+                        // Target events
+                        anchor.onTargetFound = () => {
+                            console.log(`🎯 ${config.name} FOUND!`);
+                            instructionsDiv.textContent = `✅ ${config.name} Detected!`;
+                            instructionsDiv.style.background = "rgba(0, 200, 0, 0.9)";
+                        };
+                        
+                        anchor.onTargetLost = () => {
+                            console.log(`❌ ${config.name} LOST`);
+                            instructionsDiv.textContent = "Point camera at any AR flashcard 🎯";
+                            instructionsDiv.style.background = "rgba(0, 0, 0, 0.8)";
+                        };
+                        
+                        console.log(`✅ ${config.name} loaded successfully!`);
+                        
+                    } catch (error) {
+                        console.warn(`⚠️ Could not load ${config.name}: ${error.message}`);
+                        // Continue loading other models even if one fails
+                    }
+                }
+                
+                // Animation loop for all models
+                const clock = new THREE.Clock();
+                renderer.setAnimationLoop(() => {
+                    const delta = clock.getDelta();
+                    
+                    // Update all models
+                    loadedModels.forEach(item => {
+                        // Update animation mixer
+                        if (item.mixer) {
+                            item.mixer.update(delta);
+                        }
+                        
+                        // Add rotation
+                        if (item.model && item.anchor.group.visible) {
+                            item.model.rotation.y += item.config.rotation;
+                        }
+                    });
+                    
+                    renderer.render(scene, camera);
+                });
+                
+                console.log("📹 Starting camera...");
+                await mindarThree.start();
+                console.log("🎉 AR Camera started!");
+                
+                loadingDiv.style.display = 'none';
+                
+            } catch (error) {
+                console.error("❌ Error:", error);
+                loadingDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+                
+                if (error.message && error.message.includes('targets.mind')) {
+                    errorDiv.innerHTML = `
+                        <h3>⚠️ Target File Missing</h3>
+                        <p><strong>targets.mind file not found!</strong></p>
+                        <p style="font-size: 14px; margin-top: 15px; text-align: left;">
+                            <strong>Create it:</strong><br><br>
+                            1. Go to <a href="https://hiukim.github.io/mind-ar-js-doc/tools/compile/" 
+                               target="_blank" style="color: #fff; text-decoration: underline;">
+                               MindAR Compiler</a><br><br>
+                            2. Upload ALL images (tung.jpg, trala.jpg, teddy.jpg)<br><br>
+                            3. Click "Start" then "Download"<br><br>
+                            4. Save as <code>targets.mind</code> in root folder<br><br>
+                            <strong>Note:</strong> Upload images in this order:<br>
+                            • First: tung.jpg (Target 0)<br>
+                            • Second: trala.jpg (Target 1)<br>
+                            • Third: teddy.jpg (Target 2)
+                        </p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 20px; padding: 12px 35px; font-size: 16px;
+                            background: white; color: #333; border: none;
+                            border-radius: 8px; cursor: pointer; font-weight: bold;
+                        ">🔄 Try Again</button>
+                    `;
+                } else {
+                    errorDiv.innerHTML = `
+                        <h3>⚠️ Error</h3>
+                        <p><strong>${error.message || 'Unknown error'}</strong></p>
+                        <p style="font-size: 14px; margin-top: 15px;">
+                            Check browser console (F12) for details
+                        </p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 20px; padding: 12px 35px; font-size: 16px;
+                            background: white; color: #333; border: none;
+                            border-radius: 8px; cursor: pointer; font-weight: bold;
+                        ">🔄 Try Again</button>
+                    `;
+                }
+            }
+        };
+        
+        window.addEventListener('load', startAR);
+    </script>
+</body>
 </html>
